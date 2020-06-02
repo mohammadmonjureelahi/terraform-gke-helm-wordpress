@@ -1,0 +1,98 @@
+# ---------------------------------------------------------------------------------------------------------------------
+# REQUIRED PARAMETERS
+# These variables are expected to be passed in by the operator.
+# ---------------------------------------------------------------------------------------------------------------------
+
+variable "project" {
+  description = "The project ID where all resources will be launched."
+  type        = string
+}
+
+variable "location" {
+  description = "The location (region or zone) of the GKE cluster."
+  type        = string
+}
+
+variable "region" {
+  description = "The region for the network. If the cluster is regional, this must be the same region. Otherwise, it should be the region of the zone."
+  type        = string
+}
+
+# ---------------------------------------------------------------------------------------------------------------------
+# OPTIONAL PARAMETERS
+# These parameters have reasonable defaults.
+# ---------------------------------------------------------------------------------------------------------------------
+
+variable "cluster_name" {
+  description = "The name of the Kubernetes cluster."
+  type        = string
+}
+
+variable "cluster_service_account_name" {
+  description = "The name of the custom service account used for the GKE cluster. This parameter is limited to a maximum of 28 characters."
+  type        = string
+}
+
+variable "cluster_service_account_description" {
+  description = "A description of the custom service account used for the GKE cluster."
+  type        = string
+}
+
+# Kubectl options
+
+variable "kubectl_config_path" {
+  description = "Path to the kubectl config file. Defaults to $HOME/.kube/config"
+  type        = string
+}
+
+variable "master_ipv4_cidr_block" {
+  description = "The IP range in CIDR notation (size must be /28) to use for the hosted master network. This range will be used for assigning internal IP addresses to the master or set of masters, as well as the ILB VIP. This range must not overlap with any other ranges in use within the cluster's network."
+  type        = string
+}
+
+# For the example, we recommend a /16 network for the VPC. Note that when changing the size of the network,
+# you will have to adjust the 'cidr_subnetwork_width_delta' in the 'vpc_network' -module accordingly.
+variable "vpc_cidr_block" {
+  description = "The IP address range of the VPC in CIDR notation. A prefix of /16 is recommended. Do not use a prefix higher than /27."
+  type        = string
+}
+
+# For the example, we recommend a /16 network for the secondary range. Note that when changing the size of the network,
+# you will have to adjust the 'cidr_subnetwork_width_delta' in the 'vpc_network' -module accordingly.
+variable "vpc_secondary_cidr_block" {
+  description = "The IP address range of the VPC's secondary address range in CIDR notation. A prefix of /16 is recommended. Do not use a prefix higher than /27."
+  type        = string
+}
+
+variable "path" {
+  type = string
+}
+
+# The below variables are added while working with vault helm chart deployment
+
+/*variable "gcp_json" {
+  description = "Base64 encoded json from terraform-cloud gcp account"
+}
+variable "cluster_project_id" {
+  description = "The ID of the project in which the resource belongs. If it is not provided, the provider project is used"
+}
+variable "cluster_region" {
+  description = "The default region to manage resources in. If another region is specified on a regional resource, it will take precedence"
+}
+variable "cluster_zone" {
+  description = "The default zone to manage resources in. Generally, this zone should be within the default region you specified. If another zone is specified on a zonal resource, it will take precedence"
+}
+variable "namespace" {
+  description = "Namespace of release"
+} 
+variable "helm_version" {
+  description = "Version of vault release without v ie: github release v0.5.0 would be 0.5.0"
+} */
+variable "replicas" {
+  description = "Number of HA vault replicas to create"
+  default = "3"  
+}
+variable "force_destroy_bucket" {
+  default = false
+  description = "(Optional, Default: false) When deleting a bucket, this boolean option will delete all contained objects. If you try to delete a bucket that contains objects, Terraform will fail that run."
+}
