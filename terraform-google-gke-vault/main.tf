@@ -8,6 +8,7 @@ terraform {
   # The modules used in this example have been updated with 0.12 syntax, additionally we depend on a bug fixed in
   # version 0.12.7.
   required_version = ">= 0.12.7"
+  
 }
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -18,7 +19,8 @@ provider "google" {
   version = "~> 3.1.0"
   project = var.project
   region  = var.region
-  credentials = file("${var.path}/secrets-mohammad.json")
+  //credentials = file("${var.path}/secrets-mohammad.json")
+  credentials = var.gcp_json
 
   scopes = [
     # Default scopes
@@ -36,7 +38,8 @@ provider "google-beta" {
   version = "~> 3.1.0"
   project = var.project
   region  = var.region
-  credentials = file("${var.path}/secrets-mohammad.json")
+  //credentials = file("${var.path}/secrets-mohammad.json")
+  credentials = var.gcp_json
 
   scopes = [
     # Default scopes
@@ -290,22 +293,31 @@ resource "google_storage_bucket" "vault_bucket" {
   location           = var.location
   force_destroy      = var.force_destroy_bucket
 }
-resource "google_service_account" "vault_service_account" {
+
+/*backend "gcs" {
+      bucket        = "${google_storage_bucket.vault_bucket.name}"
+  }*/
+
+/*resource "google_service_account" "vault_service_account" {
   account_id   = "vault-admin"
   display_name = "Service account for vault"
-}
+
+}*/
 resource "google_project_iam_member" "vault_iam_storage_role" {
   project = var.project
   role = "roles/storage.admin"
-  member = "serviceAccount:${google_service_account.vault_service_account.account_id}@${var.project}.iam.gserviceaccount.com"
+  //member = "serviceAccount:${google_service_account.vault_service_account.account_id}@${var.project}.iam.gserviceaccount.com"
+  member = "serviceAccount:${module.gke_service_account.account_id}@${var.project}.iam.gserviceaccount.com"
 }
 resource "google_project_iam_member" "vault_iam_kms_role" {
   project = var.project
   role = "roles/cloudkms.admin"
-  member = "serviceAccount:${google_service_account.vault_service_account.account_id}@${var.project}.iam.gserviceaccount.com"
+  //member = "serviceAccount:${google_service_account.vault_service_account.account_id}@${var.project}.iam.gserviceaccount.com"
+  member = "serviceAccount:${module.gke_service_account.account_id}@${var.project}.iam.gserviceaccount.com"
 }
 resource "google_service_account_key" "vault_account_key" {
-  service_account_id = google_service_account.vault_service_account.name
+  //service_account_id = google_service_account.vault_service_account.name
+  service_account_id = module.gke_service_account.name
   public_key_type    = "TYPE_X509_PEM_FILE"
 }
 resource "kubernetes_secret" "vault_credentials" {
@@ -317,6 +329,22 @@ resource "kubernetes_secret" "vault_credentials" {
     "credentials.json" = base64decode(google_service_account_key.vault_account_key.private_key)
   }
 }
+
+/*resource "google_storage_bucket_iam_binding" "external_service_acc_binding" {
+  //count  = var.use_external_service_account ? 1 : 0
+  bucket = google_storage_bucket.vault_bucket.name
+  role   = "roles/storage.objectAdmin"
+
+  members = [
+    "serviceAccount:${google_service_account.vault_service_account.account_id}@${var.project}.iam.gserviceaccount.com",
+  ]
+  
+
+  depends_on = [
+    google_storage_bucket.vault_bucket,
+  
+  ]
+}*/
 
 ################## Above are for vault and helm chart ##########################
 
@@ -394,11 +422,64 @@ resource "helm_release" "vault" {
         address = "[::]:8200"
         cluster_address = "[::]:8201"
       }
+      storage "gcs" {
+        bucket        = "${google_storage_bucket.vault_bucket.name}"
+        ha_enabled    = "true"
+      }
+
+      seal "gcpckms" {
+        project     = "${var.project}"
+        region      = "global"
+        key_ring    = "vault_ring"
+        crypto_key  = "vault_seal"
+        credentials = "/vault/userconfig/${kubernetes_secret.vault_credentials.metadata.0.name}/credentials.json"
+      }
+
       service_registration "kubernetes" {}
       EOF
   }
-}
 
+  set {
+    name  = "server.shareProcessNamespace"
+    value = "true"
+  }
+
+  set {
+    name  = "ui.enabled"
+    value = var.vault_ui
+  }
+
+  set {
+    name  = "ui.serviceType"
+    value = "LoadBalancer"
+  }
+
+  set {
+  name  = "server.extraContainers[0].name"
+  value = "vault-init"
+  }
+  set {
+    name  = "server.extraContainers[0].image"
+    value = "gcr.io/hightowerlabs/vault-init"
+  }
+  set {
+    name  = "server.extraContainers[0].env[0].name"
+    value = "GCS_BUCKET_NAME"
+  }
+  set {
+    name  = "server.extraContainers[0].env[0].value"
+    value = google_storage_bucket.vault_bucket.name
+  }
+  set {
+    name  = "server.extraContainers[0].env[1].name"
+    value = "KMS_KEY_ID"
+  }
+  set {
+    name  = "server.extraContainers[0].env[1].value"
+    value = "projects/sasp-vault/locations/global/vault_ring/vault_seal"
+  } 
+
+}
 
 
 /*resource "helm_release" "vault" {

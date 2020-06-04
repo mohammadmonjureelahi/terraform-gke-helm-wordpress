@@ -64,9 +64,9 @@ variable "vpc_secondary_cidr_block" {
   type        = string
 }
 
-variable "path" {
+/*variable "path" {
   type = string
-}
+}*/
 
 # The below variables are added while working with vault helm chart deployment
 
@@ -96,3 +96,20 @@ variable "force_destroy_bucket" {
   default = false
   description = "(Optional, Default: false) When deleting a bucket, this boolean option will delete all contained objects. If you try to delete a bucket that contains objects, Terraform will fail that run."
 }
+
+variable "vault_ui" {
+  description = "true/false Vault webUI"
+  default = "true"
+}
+
+variable "gcp_json" {
+  description = "Base64 encoded json from terraform-cloud gcp account"
+}
+
+variable "allow_http" {
+  description = "Allow http access to vault"
+  default = "true"
+}
+
+
+

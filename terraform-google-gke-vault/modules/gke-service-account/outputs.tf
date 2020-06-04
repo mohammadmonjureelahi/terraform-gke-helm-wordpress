@@ -4,3 +4,11 @@ output "email" {
   description = "The email address of the custom service account."
   value       = google_service_account.service_account.email
 }
+
+output "account_id" {
+  value       = google_service_account.service_account.account_id
+}
+
+output "name" {
+  value       = google_service_account.service_account.name
+}
