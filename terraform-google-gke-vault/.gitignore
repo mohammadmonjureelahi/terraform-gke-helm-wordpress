@@ -26,3 +26,6 @@ vendor
 
 # Mock user-data log file
 mock-user-data.log
+
+modules
+crash.log
